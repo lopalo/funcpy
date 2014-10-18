@@ -4,7 +4,7 @@ from inspect import isgeneratorfunction
 class Monad(object):
 
     def __new__(cls, *args, **kwargs):
-        obj = super(Monad, cls).__new__(cls, *args, **kwargs)
+        obj = super().__new__(cls)
         cls._check_type(obj)
         return obj
 
@@ -16,10 +16,11 @@ class Monad(object):
                 break
         else:
             error = "Wrong type of {}. Must be one of {}"
-            raise ValueError(error.format(obj, constructors))
+            raise TypeError(error.format(obj, constructors))
 
     def bind(self, fun):
-        assert callable(fun), fun
+        if not callable(fun):
+            raise TypeError("{} is not callable".format(fun))
         res = self.bind_implementation(fun)
         self._check_type(res)
         return res
@@ -45,12 +46,32 @@ class Monad(object):
 
 
 def do(fun):
+    """ Not quite correct implementation of the "do" notation """
+
     if not isgeneratorfunction(fun):
-        raise ValueError("Function '{}' must return a generator",format(fun))
+        raise ValueError("Function {} must return a generator".format(fun))
+
     @wraps(fun)
     def _do(*args, **kwargs):
-        #TODO
-        pass
+        def _next(val):
+            nonlocal cont
+            cont = True
+            try:
+                return gen.send(val)
+            except StopIteration as e:
+                cont = False
+                return e.value
+
+        cont = True # need for the monad that may interrupt a computation
+        gen = fun(*args, **kwargs)
+        val = next(gen)
+        if not isinstance(val, Monad):
+            error = "Wrong type of {}. Must be an instance of Monad"
+            raise TypeError(error.format(val))
+        while cont:
+            cont = False
+            val = val.bind(_next)
+        return val
     return _do
 
 
