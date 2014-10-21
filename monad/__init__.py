@@ -17,10 +17,16 @@ class Monad(object):
         else:
             error = "Wrong type of {}. Must be one of {}"
             raise TypeError(error.format(obj, constructors))
+        return obj
 
-    def bind(self, fun):
+    @staticmethod
+    def _check_callable(fun):
         if not callable(fun):
             raise TypeError("{} is not callable".format(fun))
+        return fun
+
+    def bind(self, fun):
+        self._check_callable(fun)
         res = self.bind_implementation(fun)
         self._check_type(res)
         return res
@@ -45,33 +51,33 @@ class Monad(object):
     #TODO: maybe add fail
 
 
-def do(fun):
-    """ Not quite correct implementation of the "do" notation """
+def do(monad_cls):
+    """ Limited implementation of the "do" notation """
 
-    if not isgeneratorfunction(fun):
-        raise ValueError("Function {} must return a generator".format(fun))
+    if not issubclass(monad_cls, Monad):
+        error = "Wrong type of {}. Must be an instance of Monad"
+        raise TypeError(error.format(monad_cls))
 
-    @wraps(fun)
-    def _do(*args, **kwargs):
-        def _next(val):
-            nonlocal cont
-            cont = True
-            try:
-                return gen.send(val)
-            except StopIteration as e:
-                cont = False
-                return e.value
+    def wrapper(fun):
 
-        cont = True # need for the monad that may interrupt a computation
-        gen = fun(*args, **kwargs)
-        val = next(gen)
-        if not isinstance(val, Monad):
-            error = "Wrong type of {}. Must be an instance of Monad"
-            raise TypeError(error.format(val))
-        while cont:
-            cont = False
-            val = val.bind(_next)
-        return val
-    return _do
+        if not isgeneratorfunction(fun):
+            raise ValueError("Function {} must return a generator".format(fun))
+
+        @wraps(fun)
+        def _do(*args, **kwargs):
+            def _next(val):
+                try:
+                    next_val = gen.send(val)
+                    monad_cls._check_type(next_val)
+                    return next_val.bind(_next)
+                except StopIteration as e:
+                    return monad_cls._check_type(e.value)
+
+            gen = fun(*args, **kwargs)
+            val = next(gen)
+            monad_cls._check_type(val)
+            return val.bind(_next)
+        return _do
+    return wrapper
 
 
