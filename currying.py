@@ -1,8 +1,10 @@
 from functools import wraps
-from inspect import getargspec
+from inspect import signature
 
 
+#TODO: use typing.overload for different arities
 def curry(fun):
+    arg_count = len(signature(fun).parameters)
     def _curry(_fun, _args):
         @wraps(_fun)
         def _next(*args):
@@ -16,7 +18,6 @@ def curry(fun):
     def curried(*args):
         return _curry(curried, ())(*args)
 
-    arg_count = len(getargspec(fun).args)
     return curried
 
 

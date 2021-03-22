@@ -1,4 +1,4 @@
-from monad import Monad
+from . import Monad
 
 class Cont(Monad):
 
