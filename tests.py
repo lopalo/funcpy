@@ -2,7 +2,7 @@ from __future__ import annotations
 import unittest
 from typing import Tuple, Generic, TypeVar, Optional, List
 
-# from .currying import curry
+from .currying import curry
 from .monad import maybe, state
 from .monad.maybe import Just, Nothing, Maybe
 from .monad.state import State
@@ -18,54 +18,33 @@ Stack = Tuple[T, ...]
 IntStack = Stack[int]
 
 
-# class TestCurrying(unittest.TestCase):
-#
-#     def test_sum(self):
-#         @curry
-#         def sum2(a, b):
-#             return a + b
-#         self.assertEqual(6, sum2(4)(2))
-#
-#         @curry
-#         def sum5(a, b, c, d, e):
-#             return a + b + c + d + e
-#
-#         self.assertEqual(17, sum5(5)(3)(1)(1)(7))
-#         self.assertEqual(17, sum5(5, 3)(1)(1)(7))
-#         self.assertEqual(17, sum5(5)(3, 1, 1)(7))
-#         self.assertEqual(17, sum5(5)(3)(1, 1, 7))
-#
-#     def test_fun_dict(self):
-#         @curry
-#         def sum5(a, b, c, d, e):
-#             return a + b + c + d + e
-#
-#         sum5.a = 11
-#         foo = sum5(44)(8)
-#         foo.b = 22
-#         bar = foo(32)(0)
-#         self.assertEqual("sum5", bar.__name__)
-#         self.assertEqual(11, bar.a)
-#         self.assertEqual(22, bar.b)
-#         self.assertIsNone(getattr(sum5, 'b', None))
-#
-#     def test_one(self):
-#         @curry
-#         def one():
-#             return 1
-#         self.assertEqual(1, one())
-#
-#     def test_num(self):
-#         @curry
-#         def num(a):
-#             return a
-#         self.assertEqual(66, num(66))
-#
-#     def test_excess_args(self):
-#         @curry
-#         def fun(a, b): pass
-#         with self.assertRaises(TypeError):
-#             fun(1, 2, 4)
+class TestCurrying(unittest.TestCase):
+    def test_sum(self) -> None:
+        @curry
+        def sum2(a: int, b: int) -> int:
+            return a + b
+
+        self.assertEqual(6, sum2(4)(2))
+
+        @curry
+        def sum5(a: int, b: int, c: int, d: int, e: int) -> int:
+            return a + b + c + d + e
+
+        self.assertEqual(17, sum5(5)(3)(1)(1)(7))
+
+    def test_one(self) -> None:
+        @curry
+        def one() -> int:
+            return 1
+
+        self.assertEqual(1, one())
+
+    def test_num(self) -> None:
+        @curry
+        def num(a: int) -> int:
+            return a
+
+        self.assertEqual(66, num(66))
 
 
 class TestMaybe(unittest.TestCase):
