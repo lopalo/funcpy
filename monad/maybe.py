@@ -41,7 +41,7 @@ class Nothing(_Unit, _Monad[Val]):
         return Nothing()
 
 
-Maybe = t.Union[Just[Val], Nothing]
+Maybe = t.Union[Just[Val], Nothing[Val]]
 
 
 def from_monad(monad: _Monad[Val]) -> Maybe[Val]:
