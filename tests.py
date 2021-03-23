@@ -1,13 +1,12 @@
 from __future__ import annotations
 import unittest
-from typing import Tuple, Generic, TypeVar, Optional
+from typing import Tuple, Generic, TypeVar, Optional, List
 
 # from .currying import curry
 from .monad import maybe, state
 from .monad.maybe import Just, Nothing, Maybe
 from .monad.state import State
-
-# from .monad.cont import Cont, call_cc
+from .monad.cont import Cont
 
 
 T = TypeVar("T")
@@ -224,50 +223,27 @@ class TestState(unittest.TestCase):
             )
         )
 
+        (
+            s1.bind(
+                lambda _: ss1.pop.bind(
+                    lambda a: ss1.push(5).bind(lambda b: ss1.push("b") >> s1.unit(a))
+                )
+            )
+        )
 
-# class TestCont(unittest.TestCase):
-#
-#     def test_seq(self):
-#         seq = (Cont(lambda c: c((1,)) + c((80,)))
-#                .bind(lambda t1: Cont.ret(t1 + (2,))
-#                .bind(lambda t2: Cont.ret(t2 + (7,))
-#                .bind(lambda t3: Cont.ret(t3 + t2)))))
-#         exp = (1, 2, 7, 1, 2, 80, 2, 7, 80, 2)
-#         self.assertEqual(exp, seq(lambda val: val))
-#
-#     def test_do(self):
-#         @do(Cont)
-#         def seq(d):
-#             t1 = yield Cont(lambda c: c((1,)))
-#             t2 = yield Cont.ret(t1 + (2,))
-#             t3 = yield Cont.ret(t2 + (d,))
-#             return Cont.ret(t3 + t2)
-#         exp = (1, 2, 77, 1, 2)
-#         self.assertEqual(exp, seq(77)(lambda val: val))
-#
-#     def test_wrong_do(self):
-#         @do(Cont)
-#         def seq(d):
-#             t1 = yield Cont(lambda c: c((1,)) + c((80,)))
-#             t2 = yield Cont.ret(t1 + (2,))
-#             t3 = yield Cont.ret(t2 + (d,))
-#             return Cont.ret(t3 + t2)
-#         with self.assertRaises(TypeError):
-#             seq(77)(lambda val: val)
-#
-#     def test_call_cc(self):
-#         @do(Cont)
-#         def seq(call):
-#             @do(Cont)
-#             def sub_seq(c):
-#                 if call:
-#                     yield c(100)
-#                 t2 = yield Cont.ret(11)
-#                 return Cont.ret(t2 + 200)
-#             t1 = yield call_cc(sub_seq)
-#             return Cont.ret(t1 + 12)
-#         self.assertEqual(112, seq(True)(lambda v: v))
-#         self.assertEqual(223, seq(False)(lambda v: v))
+
+class TestCont(unittest.TestCase):
+    def test_seq(self) -> None:
+        def unit(val: T) -> Cont[T, T]:
+            return Cont.unit(val)
+
+        seq = Cont[List[int], List[int]](lambda c: c([1]) + c([80])).bind(
+            lambda t1: unit(t1 + [2]).bind(
+                lambda t2: unit(t2 + [7]).bind(lambda t3: unit(t3 + t2))
+            )
+        )
+        exp = [1, 2, 7, 1, 2, 80, 2, 7, 80, 2]
+        self.assertEqual(exp, seq(lambda val: val))
 
 
 if __name__ == "__main__":
