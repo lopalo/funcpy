@@ -43,6 +43,8 @@ class Nothing(_Unit, _Monad[Val]):
 
 Maybe = t.Union[Just[Val], Nothing[Val]]
 
+DoBlock = t.Generator[_Monad[t.Any], None, _Monad[Val]]
+
 
 def from_monad(monad: _Monad[Val]) -> Maybe[Val]:
     if isinstance(monad, Just):

@@ -38,6 +38,9 @@ class State(_Monad[S, Val]):
         return self._fun(state)
 
 
+DoBlock = t.Generator[_Monad[S, t.Any], None, _Monad[S, Val]]
+
+
 def from_monad(monad: _Monad[S, Val]) -> State[S, Val]:
     if isinstance(monad, State):
         return monad

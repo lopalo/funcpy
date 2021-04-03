@@ -3,7 +3,7 @@ import unittest
 from typing import Tuple, Generic, TypeVar, Optional, List
 
 from .currying import curry
-from .monad import maybe, state
+from .monad import maybe, state, cont, do
 from .monad.maybe import Just, Nothing, Maybe
 from .monad.state import State
 from .monad.cont import Cont
@@ -113,6 +113,25 @@ class TestMaybe(unittest.TestCase):
 
         self.assertIsInstance(foo(()), Nothing)
 
+    def test_do(self) -> None:
+        def foo(a: IntStack) -> maybe.DoBlock[IntStack]:
+            b = yield from Just(a + (1,))
+            c = yield from Just(b + (3,))
+            d = yield from Just(c + (5,))
+            return Just(d + b)
+        res = maybe.value_from_monad(do(foo(())))
+        self.assertEqual((1, 3, 5, 1), res)
+
+
+    def test_do_nothing(self) -> None:
+        def foo(a: IntStack) -> maybe.DoBlock[IntStack]:
+            b = yield from Just(a + (1,))
+            c: IntStack = yield from Nothing()
+            d = yield from Just(c + (5,))
+            return Just(d + b)
+        res = maybe.value_from_monad(do(foo(())))
+        self.assertEqual(None, res)
+
     def xtest_wrong_type(self) -> None:
         # This method must trigger static type errors
         class Foo(Just[int]):
@@ -134,6 +153,12 @@ class TestMaybe(unittest.TestCase):
             .bind(lambda b: m.unit([11]))
             .bind(lambda c: m.unit(c + 200))
         )
+
+
+        def foo(a: int) -> maybe.DoBlock[int]:
+            b = yield from Just(a + 3)
+            c = yield from Just([11])
+            return m.unit(b + c + 200)
 
 
 StackS = State[Stack[T], U]
@@ -183,6 +208,22 @@ class TestState(unittest.TestCase):
         self.assertEqual(("c", "b"), res)
         self.assertEqual(("1", "2", "a", "foo", "b"), stack)
 
+    def test_do(self) -> None:
+        ss = StackState[str]()
+        def seq(t: str) -> state.DoBlock[Stack[str], Tuple[str, str]]:
+            yield ss.pop
+            yield ss.push("a")
+            yield ss.push(t)
+            yield ss.push("b")
+            yield ss.push("c")
+            a = yield from ss.pop
+            b = yield from ss.top
+            return State.unit((a, b))
+
+        res, stack = state.from_monad(do(seq("foo")))(("1", "2", "3"))
+        self.assertEqual(("c", "b"), res)
+        self.assertEqual(("1", "2", "a", "foo", "b"), stack)
+
     def xtest_wrong_type(self) -> None:
         # This method must trigger static type errors
         s1: State[Stack[int], None] = State.unit(None)
@@ -211,6 +252,13 @@ class TestState(unittest.TestCase):
         )
 
 
+        def seq() -> state.DoBlock[Stack[int], int]:
+            a = yield from ss1.pop
+            yield ss1.push(5)
+            yield ss2.push("b")
+            return s1.unit(a)
+
+
 class TestCont(unittest.TestCase):
     def test_seq(self) -> None:
         def unit(val: T) -> Cont[T, T]:
@@ -223,6 +271,19 @@ class TestCont(unittest.TestCase):
         )
         exp = [1, 2, 7, 1, 2, 80, 2, 7, 80, 2]
         self.assertEqual(exp, seq(lambda val: val))
+
+    def test_do(self) -> None:
+        def unit(val: T) -> Cont[T, T]:
+            return Cont.unit(val)
+
+        def seq(d: int) -> cont.DoBlock[List[int], List[int]]:
+            t1 = yield from Cont[List[int], List[int]](lambda c: c([1]))
+            t2 = yield from unit(t1 + [2])
+            t3 = yield from unit(t2 + [d])
+            return unit(t3 + t2)
+
+        exp = [1, 2, 77, 1, 2]
+        self.assertEqual(exp, cont.from_monad(do(seq(77)))(lambda val: val))
 
 
 if __name__ == "__main__":

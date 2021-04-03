@@ -35,3 +35,24 @@ class Monad(ABC, t.Generic[Tag, Val]):
         self: Monad[Tag, None], other: Monad[Tag, OtherVal]
     ) -> Monad[Tag, OtherVal]:
         return _apply(self.bind, lambda _: other)
+
+    def __iter__(self: Monad[Tag, Val]) -> t.Generator[Monad[Tag, Val], None, Val]:
+        val = yield self
+        return t.cast(Val, val)
+
+
+DoBlock = t.Generator[Monad[Tag, t.Any], None, Monad[Tag, Val]]
+
+
+def do(generator: DoBlock[Tag, Val]) -> Monad[Tag, Val]:
+    """ Limited implementation of the "do" notation """
+
+    def _next(val: t.Any) -> t.Any:
+        try:
+            next_val = generator.send(val)
+            return next_val.bind(_next)
+        except StopIteration as e:
+            return e.value
+
+    val = next(generator)
+    return val.bind(_next)

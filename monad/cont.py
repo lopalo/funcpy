@@ -36,6 +36,9 @@ class Cont(_Monad[R, Val]):
         return self._fun(c)
 
 
+DoBlock = t.Generator[_Monad[R, t.Any], None, _Monad[R, Val]]
+
+
 def from_monad(monad: _Monad[R, Val]) -> Cont[R, Val]:
     if isinstance(monad, Cont):
         return monad
